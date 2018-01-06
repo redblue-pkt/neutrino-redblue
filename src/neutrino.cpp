@@ -5111,11 +5111,6 @@ void CNeutrinoApp::saveKeys(const char * fname)
 void CNeutrinoApp::StopSubtitles()
 {
 	//printf("[neutrino] %s\n", __FUNCTION__);
-	if (CMoviePlayerGui::getInstance().Playing()) {
-		CMoviePlayerGui::getInstance().StopSubtitles();
-		return;
-	}
-
 	int ttx, dvbpid, ttxpid, ttxpage;
 
 	dvbpid = dvbsub_getpid();
@@ -5134,10 +5129,6 @@ void CNeutrinoApp::StopSubtitles()
 void CNeutrinoApp::StartSubtitles(bool show)
 {
 	//printf("%s: %s\n", __FUNCTION__, show ? "Show" : "Not show");
-	if (CMoviePlayerGui::getInstance().Playing()) {
-		CMoviePlayerGui::getInstance().StartSubtitles(show);
-		return;
-	}
 	if(!show)
 		return;
 	dvbsub_start(0);
