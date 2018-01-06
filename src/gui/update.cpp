@@ -418,7 +418,7 @@ bool CFlashUpdate::checkVersion4Update()
 		versionInfo = new CFlashVersionInfo(newVersion);//Memory leak: versionInfo
 		sprintf(msg, g_Locale->getText(msg_body), versionInfo->getDate(), versionInfo->getTime(), versionInfo->getReleaseCycle(), versionInfo->getType());
 
-		if(fileType <= '2')
+		if (fileType <= '2')
 		{
 			if ((strncmp(RELEASE_CYCLE, versionInfo->getReleaseCycle(), 2) != 0) &&
 			    (ShowMsg(LOCALE_MESSAGEBOX_INFO, LOCALE_FLASHUPDATE_WRONGBASE, CMsgBox::mbrYes, CMsgBox::mbYes | CMsgBox::mbNo, NEUTRINO_ICON_UPDATE) != CMsgBox::mbrYes))
@@ -443,8 +443,8 @@ bool CFlashUpdate::checkVersion4Update()
 	else
 	{
 		CFileBrowser UpdatesBrowser;
-
 		CFileFilter UpdatesFilter;
+
 		if (allow_flash)
 			UpdatesFilter.addFilter(FILEBROWSER_UPDATE_FILTER);
 
@@ -494,15 +494,8 @@ bool CFlashUpdate::checkVersion4Update()
 			//!always leave here!
 			return false;
 		}
-#if HAVE_ARM_HARDWARE
-		//tgz package install:
-		else if (file_selected->getType() == CFile::FILE_TGZ_PACKAGE){
-			fileType = 'Z';
-			//!always leave here!
-			return true;
-		}
 #endif
-#endif
+
 		//set internal filetype
 		char const * ptr = rindex(filename.c_str(), '.');
 		if(ptr) {

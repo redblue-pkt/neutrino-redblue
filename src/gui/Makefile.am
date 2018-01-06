@@ -116,12 +116,16 @@ libneutrino_gui_a_SOURCES = \
 
 if BOXTYPE_ARMBOX
 libneutrino_gui_a_SOURCES += \
-	psisetup.cpp \
-	streaminfo2.cpp
-else
+	psisetup.cpp
+endif
+
+#if BOXTYPE_ARMBOX
+#libneutrino_gui_a_SOURCES += \
+#	streaminfo2.cpp
+#else
 libneutrino_gui_a_SOURCES += \
 	streaminfo1.cpp
-endif
+#endif
 
 if ENABLE_EXTUPDATE
 libneutrino_gui_a_SOURCES += \
