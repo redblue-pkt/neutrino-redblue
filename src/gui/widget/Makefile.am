@@ -1,3 +1,5 @@
+SUBDIRS = yaft
+
 AM_CPPFLAGS = -fno-rtti -fno-exceptions -D__STDC_FORMAT_MACROS
 
 AM_CPPFLAGS += \
@@ -32,6 +34,7 @@ libneutrino_gui_widget_a_SOURCES = \
 	shellwindow.cpp \
 	stringinput.cpp \
 	stringinput_ext.cpp \
+	termwindow.cpp \
 	textbox.cpp
 
 libneutrino_gui_widget2_a_SOURCES = \

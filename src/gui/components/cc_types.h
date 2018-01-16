@@ -26,9 +26,11 @@
 #ifndef __CC_TYPES__
 #define __CC_TYPES__
 
+#include <stdint.h>
 #include <system/localize.h>
-#include <driver/rcinput.h>
+#include <driver/neutrino_msg_t.h>
 #include <gui/color_custom.h>
+#include <vector>
 
 struct gradientData_t;
 class Font;
@@ -202,7 +204,7 @@ typedef struct button_label_cc
 	button_label_cc(): 	button(NULL),
 				text(std::string()),
 				locale(NONEXISTANT_LOCALE),
-				directKeys(1, CRCInput::RC_nokey){}
+				directKeys(1, RC_NOKEY /*CRCInput::RC_nokey*/){}
 } button_label_cc_struct;
 
 #define CC_WIDTH_MIN		CFrameBuffer::getInstance()->scale2Res(16)
