@@ -141,13 +141,13 @@ void CEpgData::start()
 	ox = frameBuffer->getScreenWidthRel(bigFonts ? false /* big */ : true /* small */);
 	oy = frameBuffer->getScreenHeightRel(bigFonts ? false /* big */ : true /* small */);
 
-	font_title   = g_Font[SNeutrinoSettings::FONT_TYPE_EPG_TITLE];
+	font_title   = g_Font[SNeutrinoSettings::FONT_TYPE_MENU_TITLE];
 	topheight    = font_title->getHeight();
 	topboxheight = topheight + 6;
-	botboxheight = g_Font[SNeutrinoSettings::FONT_TYPE_EPG_DATE]->getHeight() + 6;
-	buttonheight = g_Font[SNeutrinoSettings::FONT_TYPE_MENU_FOOT]->getHeight() + 6;
-	if (buttonheight < 30)
-		buttonheight = 30; // the buttons and icons need space
+	botboxheight = g_Font[SNeutrinoSettings::FONT_TYPE_EPG_DATE]->getHeight() + 2*OFFSET_INNER_MIN;
+	// not really a CComponentsFooter but let's take its height
+	CComponentsFooter footer;
+	buttonheight = footer.getHeight();
 	oy-=buttonheight/2;
 	/* this is the text box height - and the height of the scroll bar */
 	sb = oy - topboxheight - botboxheight - buttonheight;
@@ -868,7 +868,8 @@ int CEpgData::show(const t_channel_id channel_id, uint64_t a_id, time_t* a_start
 		header->hideCCItems();
 
 	// set channel logo
-	header->setChannelLogo(channel_id, channel_name);
+	if (g_settings.channellist_show_channellogo)
+		header->setChannelLogo(channel_id, channel_name);
 
 	//paint head
 	header->paint(CC_SAVE_SCREEN_NO);
@@ -1323,7 +1324,7 @@ void CEpgData::GetEPGData(const t_channel_id channel_id, uint64_t id, time_t* st
 		char temp[20]={0};
 		strftime( temp, sizeof(temp),"%d.%m.%Y", pStartZeit);
 		epg_date = g_Locale->getText(CLocaleManager::getWeekday(pStartZeit));
-		epg_date += ".";
+		epg_date += ", ";
 		epg_date += temp;
 		strftime( temp, sizeof(temp), "%H:%M", pStartZeit);
 		epg_start= temp;
@@ -1449,51 +1450,41 @@ void CEpgData::showProgressBar()
 	}
 }
 
-//
-// -- Just display or hide TimerEventbar
-// -- 2002-05-13 rasc
-//
-
-#define EpgButtonsMax 4
-const struct button_label EpgButtons[][EpgButtonsMax] =
+#define TV_BUTTONS 0
+#define MP_BUTTONS 1
+struct button_label EpgButtons[][4] =
 {
-	{ // full view
+	{
+		// TV_BUTTONS
 		{ NEUTRINO_ICON_BUTTON_RED, LOCALE_TIMERBAR_RECORDEVENT },
-		{ NEUTRINO_ICON_BUTTON_GREEN, LOCALE_CHANNELLIST_ADDITIONAL },
+		{ NEUTRINO_ICON_BUTTON_GREEN, LOCALE_TMDB_INFO },
 		{ NEUTRINO_ICON_BUTTON_YELLOW, LOCALE_TIMERBAR_CHANNELSWITCH },
 		{ NEUTRINO_ICON_BUTTON_BLUE, LOCALE_EPGVIEWER_MORE_SCREENINGS_SHORT }
 	},
-	{ // w/o followscreenings
-		{ NEUTRINO_ICON_BUTTON_RED, LOCALE_TIMERBAR_RECORDEVENT },
-		{ NEUTRINO_ICON_BUTTON_GREEN, LOCALE_CHANNELLIST_ADDITIONAL },
-		{ NEUTRINO_ICON_BUTTON_YELLOW, LOCALE_TIMERBAR_CHANNELSWITCH }
-	},
-	{ // movieplayer mode
+	{
+		// MP_BUTTONS
 		{ NEUTRINO_ICON_BUTTON_RED, LOCALE_EPG_SAVING },
-		{ NEUTRINO_ICON_BUTTON_GREEN, LOCALE_CHANNELLIST_ADDITIONAL }
+		{ NEUTRINO_ICON_BUTTON_GREEN, LOCALE_TMDB_INFO }
 	}
 };
 
 void CEpgData::showTimerEventBar (bool pshow, bool adzap, bool mp_info)
 {
-	int  x, y, w, h, fh;
-        int icol_w, icol_h;
+	int x, y, w, h;
 
 	x = sx;
 	y = sy + oy;
 	w = ox;
-
-	// why we don't use buttonheight member?
-	fh = g_Font[SNeutrinoSettings::FONT_TYPE_MENU_FOOT]->getHeight();
-
-        frameBuffer->getIconSize(NEUTRINO_ICON_BUTTON_RED, &icol_w, &icol_h);
-	h = std::max(fh, icol_h+4);
+	h = buttonheight;
 
 	// hide only?
-	if (! pshow) {
-		frameBuffer->paintBackgroundBoxRel(sx,y,ox,h);
+	if (!pshow)
+	{
+		frameBuffer->paintBackgroundBoxRel(x, y, w, h);
 		return;
 	}
+
+	int MaxButtons = mp_info ? 2 : 4; //TODO: auto-calc from struct
 
 	std::string adzap_button;
 	if (adzap)
@@ -1502,21 +1493,35 @@ void CEpgData::showTimerEventBar (bool pshow, bool adzap, bool mp_info)
 		adzap_button += " " + to_string(g_settings.adzap_zapBackPeriod / 60) + " ";
 		adzap_button += g_Locale->getText(LOCALE_UNIT_SHORT_MINUTE);
 	}
-	bool tmdb = g_settings.tmdb_enabled;
-	bool fscr = (has_follow_screenings && !call_fromfollowlist);
+
 	if (mp_info)
-		::paintButtons(x, y, w, tmdb ? 2 : 1, EpgButtons[2], w, h);
+	{
+		// check tmdb button
+		if (g_settings.tmdb_enabled)
+			EpgButtons[MP_BUTTONS][1].button = NEUTRINO_ICON_BUTTON_GREEN;
+		else
+			EpgButtons[MP_BUTTONS][1].button = NEUTRINO_ICON_BUTTON_DUMMY_SMALL;
+
+		::paintButtons(x, y, w, MaxButtons, EpgButtons[MP_BUTTONS], w, h);
+	}
 	else
 	{
-		int c = EpgButtonsMax;
-		if (!tmdb)
-			c--; // reduce tmdb button
-		if (!fscr)
-			c--; // reduce blue button
-		if (g_settings.recording_type != CNeutrinoApp::RECORDING_OFF)
-			::paintButtons(x, y, w, c, EpgButtons[fscr ? 0 : 1], w, h, "", false, COL_MENUFOOT_TEXT, adzap ? adzap_button.c_str() : NULL, 2);
+		// check followscreenings button
+		if (has_follow_screenings && !call_fromfollowlist)
+			EpgButtons[TV_BUTTONS][3].button = NEUTRINO_ICON_BUTTON_BLUE;
 		else
-			::paintButtons(x, y, w, c, &EpgButtons[fscr ? 0 : 1][1], w, h, "", false, COL_MENUFOOT_TEXT, adzap ? adzap_button.c_str() : NULL, 1);
+			EpgButtons[TV_BUTTONS][3].button = NEUTRINO_ICON_BUTTON_DUMMY_SMALL;
+
+		// check tmdb button
+		if (g_settings.tmdb_enabled)
+			EpgButtons[TV_BUTTONS][1].button = NEUTRINO_ICON_BUTTON_GREEN;
+		else
+			EpgButtons[TV_BUTTONS][1].button = NEUTRINO_ICON_BUTTON_DUMMY_SMALL;
+
+		if (g_settings.recording_type != CNeutrinoApp::RECORDING_OFF)
+			::paintButtons(x, y, w, MaxButtons, EpgButtons[TV_BUTTONS], w, h, "", false, COL_MENUFOOT_TEXT, adzap ? adzap_button.c_str() : NULL, 2);
+		else // don't show recording button
+			::paintButtons(x, y, w, MaxButtons, &EpgButtons[TV_BUTTONS][1], w, h, "", false, COL_MENUFOOT_TEXT, adzap ? adzap_button.c_str() : NULL, 1);
 	}
 }
 
