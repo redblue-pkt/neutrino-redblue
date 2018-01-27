@@ -501,8 +501,8 @@ void CMovieBrowser::initFrames(void)
 	m_pcFontTitle = TITLE_FONT;
 
 	//TRACE("[mb]->%s\n", __func__);
-	m_cBoxFrame.iWidth = 			framebuffer->getScreenWidthRel();
-	m_cBoxFrame.iHeight = 			framebuffer->getScreenHeightRel();
+	m_cBoxFrame.iWidth = 			framebuffer->getWindowWidth();
+	m_cBoxFrame.iHeight = 			framebuffer->getWindowHeight();
 	m_cBoxFrame.iX = 			getScreenStartX(m_cBoxFrame.iWidth);
 	m_cBoxFrame.iY = 			getScreenStartY(m_cBoxFrame.iHeight);
 
@@ -2923,8 +2923,11 @@ bool CMovieBrowser::loadTsFileNamesFromDir(const std::string & dirname)
 			} else {
 				result |= addFile(flist[i], dirItNr);
 			}
+//NI
+#if 0
 			if (result)
 				OnLocalProgress(i, count, dirname );
+#endif
 		}
 		//result = true;
 	}
@@ -3166,7 +3169,7 @@ void CMovieBrowser::loadMovies(bool doRefresh)
 	struct timeval t1, t2;
 	gettimeofday(&t1, NULL);
 
-	CProgressWindow loadBox((show_mode == MB_SHOW_YT) ? LOCALE_MOVIEPLAYER_YTPLAYBACK : LOCALE_MOVIEBROWSER_SCAN_FOR_MOVIES, CCW_PERCENT 50, CCW_PERCENT 10, NULL, show_mode == MB_SHOW_YT ? &ytparser.OnProgress : &OnLocalProgress, &OnGlobalProgress);
+	CProgressWindow loadBox((show_mode == MB_SHOW_YT) ? LOCALE_MOVIEPLAYER_YTPLAYBACK : LOCALE_MOVIEBROWSER_SCAN_FOR_MOVIES, CCW_PERCENT 50, CCW_PERCENT 10, NULL, show_mode == MB_SHOW_YT ? &ytparser.OnProgress : /* //NI &OnLocalProgress, */ &OnGlobalProgress);
 	loadBox.enableShadow();
 	loadBox.paint();
 

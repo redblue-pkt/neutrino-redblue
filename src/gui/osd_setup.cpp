@@ -251,7 +251,7 @@ int COsdSetup::exec(CMenuTarget* parent, const std::string &actionKey)
 		CFileFilter fileFilter;
 		fileFilter.addFilter("ttf");
 		fileBrowser.Filter = &fileFilter;
-		if (fileBrowser.exec(FONTDIR) == true)
+		if (fileBrowser.exec(getPathName(g_settings.font_file).c_str()) == true)
 		{
 			g_settings.font_file = fileBrowser.getSelectedFile()->Name;
 			printf("[neutrino] new font file %s\n", fileBrowser.getSelectedFile()->Name.c_str());
@@ -267,7 +267,7 @@ int COsdSetup::exec(CMenuTarget* parent, const std::string &actionKey)
 		CFileFilter fileFilter;
 		fileFilter.addFilter("ttf");
 		fileBrowser.Filter = &fileFilter;
-		if (fileBrowser.exec(FONTDIR) == true)
+		if (fileBrowser.exec(getPathName(g_settings.ttx_font_file).c_str()) == true)
 		{
 			g_settings.ttx_font_file = fileBrowser.getSelectedFile()->Name;
 			ttx_font_file = fileBrowser.getSelectedFile()->Name;
@@ -284,7 +284,7 @@ int COsdSetup::exec(CMenuTarget* parent, const std::string &actionKey)
 		CFileFilter fileFilter;
 		fileFilter.addFilter("ttf");
 		fileBrowser.Filter = &fileFilter;
-		if (fileBrowser.exec(FONTDIR) == true)
+		if (fileBrowser.exec(getPathName(g_settings.sub_font_file).c_str()) == true)
 		{
 			g_settings.sub_font_file = fileBrowser.getSelectedFile()->Name;
 			*sub_font_file = fileBrowser.getSelectedFile()->Name;
@@ -1719,8 +1719,8 @@ void COsdSetup::paintWindowSize(int w, int h)
 	if (g_settings.window_height < WINDOW_SIZE_MIN)	
 		g_settings.window_height = WINDOW_SIZE_MIN;
 
-	win_demo->setWidth(frameBuffer->getScreenWidthRel());
-	win_demo->setHeight(frameBuffer->getScreenHeightRel());
+	win_demo->setWidth(frameBuffer->getWindowWidth());
+	win_demo->setHeight(frameBuffer->getWindowHeight());
 	win_demo->setXPos(getScreenStartX(win_demo->getWidth()));
 	win_demo->setYPos(getScreenStartY(win_demo->getHeight()));
 
