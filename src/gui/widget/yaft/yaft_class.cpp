@@ -77,10 +77,8 @@ static pid_t fork_and_exec(int *master, int lines, int cols)
 	ws.ws_col = cols;
 	/* XXX: this variables are UNUSED (man tty_ioctl),
 		but useful for calculating terminal cell size */
-#if 0
-	ws.ws_ypixel = CELL_HEIGHT * lines;
-	ws.ws_xpixel = CELL_WIDTH * cols;
-#endif
+	ws.ws_ypixel = 0; //CELL_HEIGHT * lines;
+	ws.ws_xpixel = 0; //CELL_WIDTH * cols;
 
 	pid_t pid;
 	pid = forkpty(master, NULL, NULL, &ws);
@@ -175,7 +173,7 @@ int YaFT::run(void)
 		if (FD_ISSET(term->fd, &fds)) {
 			while ((size = read(term->fd, buf, BUFSIZE)) > 0) {
 				term->parse(buf, size);
-				while (term->lines_available > 0) {
+				while (term->txt.size() > 1) {
 					std::string s = term->txt.front();
 					OnShellOutputLoop(&s, res, &ok);
 #if 0
@@ -184,9 +182,8 @@ int YaFT::run(void)
 					else
 						printf("[CTermWindow] [%s:%d] res=NULL ok=%d\n", __func__, __LINE__, ok);
 #endif
-					// fprintf(stderr, "%d %s\n", term.lines_available, term.txt.front().c_str());
+					// fprintf(stderr, "size %d '%s'\n", term->txt.size(), s.c_str());
 					term->txt.pop();
-					term->lines_available--;
 				}
 				if (! paint)
 					continue;

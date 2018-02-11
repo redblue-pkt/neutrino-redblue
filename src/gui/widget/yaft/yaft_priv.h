@@ -31,11 +31,12 @@
 #include <stdlib.h> /* atoi(), strtol() */
 #include <unistd.h> /* write() */
 #include <stdio.h>
-//#include "glyph.h"
 
 #include "color.h"
 
 #include <system/debug.h>
+#include <driver/fontrenderer.h>
+
 #define logging(a, message...) dprintf(DEBUG_ ## a, "YaFT: " message)
 
 const uint8_t attr_mask[] = {
@@ -107,7 +108,6 @@ class YaFT_p
 		STATE_ESC   = 0x01, /* 0x1B, \033, ESC */
 		STATE_CSI   = 0x02, /* ESC [ */
 		STATE_OSC   = 0x04, /* ESC ] */
-		STATE_DCS   = 0x08, /* ESC P */
 	};
 
 	enum char_attr {
@@ -123,7 +123,6 @@ class YaFT_p
 		MODE_ORIGIN  = 0x01, /* origin mode: DECOM */
 		MODE_CURSOR  = 0x02, /* cursor visible: DECTCEM */
 		MODE_AMRIGHT = 0x04, /* auto wrap: DECAWM */
-		MODE_VWBS    = 0x08, /* variable-width backspace */
 	};
 
 	struct esc_t {
@@ -132,17 +131,10 @@ class YaFT_p
 		enum esc_state state;
 	};
 
-	enum glyph_width {
-		NEXT_TO_WIDE = 0,
-		HALF,
-		WIDE,
-	};
-
 	struct cell_t {
-		const struct glyph_t *glyphp;   /* pointer to glyph */
 		struct color_pair_t color_pair; /* color (fg, bg) */
 		int attribute;                  /* bold, underscore, etc... */
-		enum glyph_width width;         /* wide char flag: WIDE, NEXT_TO_WIDE, HALF */
+		std::string utf8_str;
 	};
 
 	struct framebuffer_t {
@@ -173,20 +165,22 @@ class YaFT_p
 	struct esc_t esc;                        /* store escape sequence */
 	uint32_t virtual_palette[COLORS];        /* virtual color palette: always 32bpp */
 	bool palette_modified;                   /* true if palette changed by OSC 4/104 */
-	const struct glyph_t *glyph[UCS2_CHARS]; /* array of pointer to glyphs[] */
 	bool nlseen;
 	int CELL_WIDTH, CELL_HEIGHT;
 	struct framebuffer_t fb;
 	struct fb_var_screeninfo *screeninfo;
 	bool paint;
+	FBFontRenderClass *fr;
+	Font *font;
+	const char *fontstyle;
  public:
 	int fd;                                  /* master of pseudo terminal */
 	int cols, lines;                         /* terminal size (cell) */
 	time_t last_paint;
 	std::queue<std::string> txt;             /* contains "sanitized" (without control chars) output text */
-	int lines_available;                     /* lines available in txt */
 
 	YaFT_p(bool paint = true);
+	~YaFT_p();
 	bool init();
 	void parse(uint8_t *buf, int size);
 	void refresh(void);
@@ -194,7 +188,7 @@ class YaFT_p
 	void draw_line(int line);
 	void erase_cell(int y, int x);
 	void copy_cell(int dst_y, int dst_x, int src_y, int src_x);
-	int set_cell(int y, int x, const struct glyph_t *glyphp);
+	int set_cell(int y, int x, std::string &utf);
 	void swap_lines(int i, int j);
 	void scroll(int from, int to, int offset);
 	void move_cursor(int y_offset, int x_offset);
@@ -205,7 +199,6 @@ class YaFT_p
 	void reset_charset(void);
 	void reset(void);
 	void term_die(void);
-	bool term_init(int width, int height);
 	void utf8_charset(uint8_t ch);
 	void control_character(uint8_t ch);
 	void esc_sequence(uint8_t ch);

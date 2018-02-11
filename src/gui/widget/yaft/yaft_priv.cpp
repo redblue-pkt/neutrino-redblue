@@ -25,9 +25,10 @@
  */
 
 #include "yaft_priv.h"
-#include "glyph.h"
 #include <driver/framebuffer.h>
+#include <driver/neutrinofonts.h>
 #include <driver/abstime.h>
+#include <xmltree/xmlinterface.h> /* UTF8 conversion */
 
 /* parse_arg functions */
 void YaFT_p::reset_parm(parm_t *pt)
@@ -80,15 +81,24 @@ void YaFT_p::parse_arg(std::string &buf, struct parm_t *pt, int delim, int (is_v
 	logging(DEBUG, "argc:%d\n", pt->argc);
 }
 
+extern std::string ttx_font_file;
 /* constructor, Paint == false means "quiet mode, just execute
  * a command but don't display anything */
 YaFT_p::YaFT_p(bool Paint)
 {
-	lines_available = 0;
 	txt.push("");
 	nlseen = false;
 	paint = Paint;
 	last_paint = 0;
+	fr = NULL;
+	font = NULL;
+}
+
+YaFT_p::~YaFT_p()
+{
+	/* delete NULL is fine */
+	delete font;
+	delete fr;
 }
 
 bool YaFT_p::init()
@@ -105,49 +115,106 @@ bool YaFT_p::init()
 	fb.dy_max = -1;
 	screeninfo = fb.cfb->getScreenInfo();
 
-	return term_init(fb.width, fb.height);
+	width  = fb.width;
+	height = fb.height;
+	int fw, fh;
+#define LINES 30
+#define COLS 100
+	int scalex = 64, scaley = 64;
+	/*
+	 * try to get a font size that fits about LINES x COLS into the terminal.
+	 * NOTE: this is not guaranteed to work! Terminal might be smaller or bigger
+	 */
+	std::string shell_ttf = CNeutrinoFonts::getInstance()->getShellTTF();
+	if (shell_ttf.empty())
+		shell_ttf = ttx_font_file;
+	if (paint) {
+		for (int i = 0; i < 2; i++) {
+			delete font;
+			delete fr;
+			fr = new FBFontRenderClass(scalex, scaley);
+			fontstyle = fr->AddFont(shell_ttf.c_str());
+			font = fr->getFont(fr->getFamily(shell_ttf.c_str()).c_str(), fontstyle, height / LINES);
+			/* getWidth() does not return good values, leading to "out of box" rendering later
+			fw = font->getWidth();
+			   ... so just let's get the width of a wide glyph (it's a monospace font after all */
+			fw = font->getRenderWidth("@");
+			fh = font->getHeight();
+			fprintf(stderr, "FONT[%d]: fw %2d(%2d) fh: %2d sx %d sy %d w %d h %d\n",
+					i, fw, font->getWidth(), fh, scalex, scaley, width, height);
+			scalex = 64 * width / (fw * COLS) + 1;
+			scaley = 64 * height / (fh * LINES) + 1;
+		}
+	} else {
+		/* dummy */
+		fh = height / LINES;
+		fw = width / COLS;
+	}
+
+	CELL_WIDTH = fw;
+	CELL_HEIGHT = fh;
+	lines = height / CELL_HEIGHT;
+	cols  = width / CELL_WIDTH;
+
+	logging(NORMAL, "terminal cols:%d lines:%d paint:%d\n", cols, lines, paint);
+
+	/* allocate memory */
+	line_dirty.reserve(lines);
+	tabstop.reserve(cols);
+	esc.buf.reserve(1024);
+
+	cells.clear();
+	if (paint) {
+		std::vector<cell_t> line;
+		line.resize(cols);
+		for (int i = 0; i < lines; i++)
+			cells.push_back(line);
+	}
+
+	/* initialize palette */
+	for (int i = 0; i < COLORS; i++)
+		virtual_palette[i] = color_list[i];
+	palette_modified = true; /* first refresh() will initialize real_palette[] */
+
+	/* reset terminal */
+	reset();
+
+	return true;
 }
 
 void YaFT_p::erase_cell(int y, int x)
 {
 	struct cell_t *cellp;
+	if (! paint)
+		return;
 
 	cellp             = &cells[y][x];
-	cellp->glyphp     = glyph[DEFAULT_CHAR];
 	cellp->color_pair = color_pair; /* bce */
 	cellp->attribute  = ATTR_RESET;
-	cellp->width      = HALF;
+	cellp->utf8_str.clear();
 	line_dirty[y] = true;
 }
 
 void YaFT_p::copy_cell(int dst_y, int dst_x, int src_y, int src_x)
 {
 	struct cell_t *dst, *src;
-
+	if (! paint)
+		return;
 	dst = &cells[dst_y][dst_x];
 	src = &cells[src_y][src_x];
-
-	if (src->width == NEXT_TO_WIDE) {
-		return;
-	} else if (src->width == WIDE && dst_x == (cols - 1)) {
-		erase_cell(dst_y, dst_x);
-	} else {
-		*dst = *src;
-		if (src->width == WIDE) {
-			dst  = &cells[dst_y][dst_x + 1];
-			*dst = *src;
-			dst->width = NEXT_TO_WIDE;
-		}
-		line_dirty[dst_y] = true;
-	}
+	*dst = *src;
+	line_dirty[dst_y] = true;
 }
 
-int YaFT_p::set_cell(int y, int x, const struct glyph_t *glyphp)
+int YaFT_p::set_cell(int y, int x, std::string &utf8)
 {
-	struct cell_t cell; //, *cellp;
+	struct cell_t cell;
 	uint8_t color_tmp;
 
-	cell.glyphp = glyphp;
+	if (! paint)
+		return 1;
+
+	cell.utf8_str = utf8;
 
 	cell.color_pair.fg = (attribute & attr_mask[ATTR_BOLD] && color_pair.fg <= 7) ?
 		color_pair.fg + BRIGHT_INC : color_pair.fg;
@@ -161,27 +228,18 @@ int YaFT_p::set_cell(int y, int x, const struct glyph_t *glyphp)
 	}
 
 	cell.attribute  = attribute;
-	cell.width      = (glyph_width)glyphp->width;
 
 	cells[y][x] = cell;
 	line_dirty[y] = true;
-
-	if (cell.width == WIDE && x + 1 < cols) {
-		cell.width = NEXT_TO_WIDE;
-		cells[y][x + 1] = cell;
-		return WIDE;
-	}
-
-	if (cell.width == HALF /* isolated NEXT_TO_WIDE cell */
-		&& x + 1 < cols
-		&& cells[y][x + 1].width == NEXT_TO_WIDE) {
-		erase_cell(y, x + 1);
-	}
-	return HALF;
+	return 1;
 }
 
 void YaFT_p::swap_lines(int i, int j)
 {
+	/* only called from scroll(), which already checks for paint before
+	if (!paint)
+		return;
+	 */
 	std::swap(cells[i], cells[j]);
 }
 
@@ -189,7 +247,7 @@ void YaFT_p::scroll(int from, int to, int offset)
 {
 	int abs_offset, scroll_lines;
 
-	if (offset == 0 || from >= to)
+	if (offset == 0 || from >= to || paint == false)
 		return;
 
 	logging(DEBUG, "scroll from:%d to:%d offset:%d\n", from, to, offset);
@@ -221,6 +279,12 @@ void YaFT_p::move_cursor(int y_offset, int x_offset)
 {
 	int x, y, top, bottom;
 
+	if (y_offset > 0 && !nlseen)
+		txt.push("");
+
+	if (! paint)
+		return;
+
 	x = cursor.x + x_offset;
 	y = cursor.y + y_offset;
 
@@ -247,11 +311,6 @@ void YaFT_p::move_cursor(int y_offset, int x_offset)
 		scroll(top, bottom, y_offset);
 	}
 	cursor.y = y;
-
-	if (y_offset > 0 && !nlseen) {
-		txt.push("");
-		lines_available++;
-	}
 }
 
 /* absolute movement: never scroll */
@@ -271,10 +330,8 @@ void YaFT_p::set_cursor(int y, int x)
 	x = (x < 0) ? 0: (x >= cols) ? cols - 1: x;
 	y = (y < top) ? top: (y > bottom) ? bottom: y;
 
-	if (cursor.y != y && !nlseen) {
+	if (cursor.y != y && !nlseen)
 		txt.push("");
-		lines_available++;
-	}
 
 	cursor.x = x;
 	cursor.y = y;
@@ -283,36 +340,23 @@ void YaFT_p::set_cursor(int y, int x)
 
 void YaFT_p::addch(uint32_t code)
 {
-	int _width;
-	const struct glyph_t *glyphp;
-
 	logging(DEBUG, "addch: U+%.4X\n", code);
 
-	_width = wcwidth(code);
-
-	if (code <= 0xff) { /* non-ascii not supported */
-		char c = (char)code;
-		txt.back().push_back(c);
-	}
-	if (_width <= 0)                               /* zero width: not support comibining character */
-		return;
-	else if (0x100000 <= code && code <= 0x10FFFD) /* unicode private area: plane 16 (DRCSMMv1) */
-		glyphp = glyph[SUBSTITUTE_HALF];
-	else if (code >= UCS2_CHARS              /* yaft support only UCS2 */
-		|| glyph[code] == NULL           /* missing glyph */
-		|| glyph[code]->width != _width) /* width unmatch */
-		glyphp = (_width == 1) ? glyph[SUBSTITUTE_HALF] : glyph[SUBSTITUTE_WIDE];
-	else
-		glyphp = glyph[code];
-
-	if ((wrap_occured && cursor.x == cols - 1) /* folding */
-		|| (glyphp->width == WIDE && cursor.x == cols - 1)) {
+	if (wrap_occured && cursor.x == cols - 1) {
 		set_cursor(cursor.y, 0);
 		move_cursor(1, 0);
 	}
 	wrap_occured = false;
 
-	move_cursor(0, set_cell(cursor.y, cursor.x, glyphp));
+	std::string str = Unicode_Character_to_UTF8(code);
+	move_cursor(0, set_cell(cursor.y, cursor.x, str));
+	txt.back().append(str);
+#if 0
+	printf(stderr, "addch 0x%04x => ", code);
+	onst char *f = str.c_str();
+	hile (*f) fprintf(stderr, "0x%02x ", *f++);
+	fprintf(stderr, "\n");
+#endif
 }
 
 void YaFT_p::reset_esc(void)
@@ -420,69 +464,6 @@ void YaFT_p::term_die(void)
 	cells.clear();
 }
 
-bool YaFT_p::term_init(int w, int h)
-{
-	const glyph_t *_glyphs;
-
-	width  = w;
-	height = h;
-
-	int j = 0;
-	do {
-		_glyphs = glyphs[j];
-		CELL_WIDTH = _glyphs[0].code;
-		CELL_HEIGHT = _glyphs[0].width;
-		cols  = width / CELL_WIDTH;
-		if (cols > 79)
-			break;
-		j++;
-	} while (glyphs[j]);
-
-	lines = height / CELL_HEIGHT;
-
-	logging(NORMAL, "terminal cols:%d lines:%d\n", cols, lines);
-
-	/* allocate memory */
-	line_dirty.reserve(lines);
-	tabstop.reserve(cols);
-	esc.buf.reserve(1024);
-
-	cells.clear();
-	std::vector<cell_t> line;
-	line.resize(cols);
-	for (int i = 0; i < lines; i++)
-		cells.push_back(line);
-	line.resize(0);
-
-	/* initialize palette */
-	for (int i = 0; i < COLORS; i++)
-		virtual_palette[i] = color_list[i];
-	palette_modified = true; /* first refresh() will initialize real_palette[] */
-
-	/* initialize glyph map */
-	for (uint32_t code = 0; code < UCS2_CHARS; code++)
-		glyph[code] = NULL;
-
-	for (uint32_t gi = 1; _glyphs[gi].code > 0; gi++)
-		glyph[_glyphs[gi].code] = &_glyphs[gi];
-
-	if (!glyph[DEFAULT_CHAR]
-		|| !glyph[SUBSTITUTE_HALF]
-		|| !glyph[SUBSTITUTE_WIDE]) {
-		logging(NORMAL, "couldn't find essential glyph:\
-			DEFAULT_CHAR(U+%.4X):%p SUBSTITUTE_HALF(U+%.4X):%p SUBSTITUTE_WIDE(U+%.4X):%p\n",
-			DEFAULT_CHAR, glyph[DEFAULT_CHAR],
-			SUBSTITUTE_HALF, glyph[SUBSTITUTE_HALF],
-			SUBSTITUTE_WIDE, glyph[SUBSTITUTE_WIDE]);
-		return false;
-	}
-
-	/* reset terminal */
-	reset();
-
-	return true;
-}
-
 void YaFT_p::parse(uint8_t *buf, int size)
 {
 	/*
@@ -536,7 +517,8 @@ void YaFT_p::control_character(uint8_t ch)
 	switch(ch) {
 	case BS:  bs(); break;
 	case HT:  tab(); break;
-	case LF:  nl(); break;
+	case LF:  nlseen = true;
+		  nl(); break;
 	case VT:  nl(); break;
 	case FF:  nl(); break;
 	case CR:  cr(); break;
@@ -757,18 +739,10 @@ int YaFT_p::sum(struct parm_t *parm)
 	return s;
 }
 
-static int my_ceil(int val, int div)
-{
-	if (div == 0)
-		return 0;
-	else
-		return (val + div - 1) / div;
-}
-
 void YaFT_p::draw_line(int line)
 {
-	int pos, bdf_padding, glyph_w, margin_right;
-	int col, w, h;
+	int pos, col, w, h;
+	Font::fontmodifier mod;
 	uint32_t pixel;
 	struct color_pair_t col_pair;
 	struct cell_t *cellp;
@@ -778,56 +752,40 @@ void YaFT_p::draw_line(int line)
 	if (fb.dy_max < (line+1) * CELL_HEIGHT - 1)
 		fb.dy_max = (line+1) * CELL_HEIGHT - 1;
 
-	//std::string s = "";
-	for (col = cols - 1; col >= 0; col--) {
-		margin_right = (cols - 1 - col) * CELL_WIDTH;
-
+	for (col = 0; col < cols; col++) {
 		/* target cell */
 		cellp = &cells[line][col];
-
+		mod = Font::Regular;
+		if (cellp->attribute & attr_mask[ATTR_BOLD])
+			mod = Font::Embolden;
 		/* copy current color_pair (maybe changed) */
 		col_pair = cellp->color_pair;
 
-		/* check wide character or not */
-		glyph_w = (cellp->width == HALF) ? CELL_WIDTH: CELL_WIDTH * 2;
-		bdf_padding = my_ceil(glyph_w, BITS_PER_BYTE) * BITS_PER_BYTE - glyph_w;
-		if (cellp->width == WIDE)
-			bdf_padding += CELL_WIDTH;
-
 		/* check cursor positon */
 		if ((mode & MODE_CURSOR && line == cursor.y)
-			&& (col == cursor.x
-			|| (cellp->width == WIDE && (col + 1) == cursor.x)
-			|| (cellp->width == NEXT_TO_WIDE && (col - 1) == cursor.x))) {
+			&& col == cursor.x) {
 			col_pair.fg = DEFAULT_BG;
 			col_pair.bg = ACTIVE_CURSOR_COLOR;
 		}
 
+		/* clear background... */
+		pixel = fb.real_palette[col_pair.bg];
 		for (h = 0; h < CELL_HEIGHT; h++) {
+			pos = col * CELL_WIDTH + (line * CELL_HEIGHT + h) * fb.width;
 			/* if UNDERLINE attribute on, swap bg/fg */
 			if ((h == (CELL_HEIGHT - 1)) && (cellp->attribute & attr_mask[ATTR_UNDERLINE]))
-				col_pair.bg = col_pair.fg;
-
-			pos = (width - 1 - margin_right/* - w*/)
-				+ (line * CELL_HEIGHT + h) * fb.width;
-
+				pixel = fb.real_palette[col_pair.fg];
 			for (w = 0; w < CELL_WIDTH; w++) {
-				/* set color palette */
-				if (cellp->glyphp->bitmap[h] & (0x01 << (bdf_padding + w)))
-					pixel = fb.real_palette[col_pair.fg];
-				else
-					pixel = fb.real_palette[col_pair.bg];
-
-				/* update copy buffer only */
-				//memcpy(fb.buf + pos, &pixel, fb.info.bytes_per_pixel);
 				fb.buf[pos] = pixel;
-				pos--;
+				pos++;
 			}
 		}
-		//s.insert(s.begin(), cellp->glyphp->code);
+		if (cellp->utf8_str.empty())
+			continue;
+		int xs = col * CELL_WIDTH;
+		font->RenderString(xs, (line + 1) * CELL_HEIGHT, width - xs, cellp->utf8_str,
+				fb.real_palette[col_pair.fg], mod, Font::IS_UTF8, fb.buf, fb.width * sizeof(fb_pixel_t));
 	}
-	//printf("draw_line: %02d ",  line);puts(s.c_str());
-
 	line_dirty[line] = ((mode & MODE_CURSOR) && cursor.y == line) ? true: false;
 }
 
@@ -867,8 +825,7 @@ void YaFT_p::refresh()
 #if 1
 	if (fb.dy_max != -1) {
 		int blit_height = fb.dy_max - fb.dy_min;
-		uint32_t *blit_start = fb.buf + (fb.dy_min * fb.width);
-		fb.cfb->blit2FB(blit_start, fb.width, blit_height, fb.xstart, fb.ystart+fb.dy_min, 0, 0);
+		fb.cfb->blit2FB(fb.buf, fb.width, blit_height, fb.xstart, fb.ystart+fb.dy_min, 0, fb.dy_min);
 	}
 #else
 	fb.cfb->blit2FB(fb.buf, fb.width, fb.height, fb.xstart, fb.ystart, 0, 0);
