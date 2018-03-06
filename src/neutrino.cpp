@@ -947,6 +947,7 @@ int CNeutrinoApp::loadSetup(const char * fname)
 	//Movie-Player
 	g_settings.movieplayer_repeat_on = configfile.getInt32("movieplayer_repeat_on", CMoviePlayerGui::REPEAT_OFF);
 	g_settings.movieplayer_bisection_jump = configfile.getInt32("movieplayer_bisection_jump", 5);
+	g_settings.movieplayer_display_playtime = configfile.getInt32("movieplayer_display_playtime", 0);
 #ifdef YOUTUBE_DEV_ID
 	g_settings.youtube_dev_id = YOUTUBE_DEV_ID;
 #else
@@ -1631,6 +1632,7 @@ void CNeutrinoApp::saveSetup(const char * fname)
 	//Movie-Player
 	configfile.setInt32( "movieplayer_repeat_on", g_settings.movieplayer_repeat_on );
 	configfile.setInt32( "movieplayer_bisection_jump", g_settings.movieplayer_bisection_jump );
+	configfile.setInt32( "movieplayer_display_playtime", g_settings.movieplayer_display_playtime );
 #ifndef YOUTUBE_DEV_ID
 	configfile.setString( "youtube_dev_id", g_settings.youtube_dev_id );
 #endif
@@ -3064,13 +3066,13 @@ void CNeutrinoApp::RealRun()
 				CMediaPlayerMenu * multimedia_menu = CMediaPlayerMenu::getInstance();
 				multimedia_menu->exec(NULL, "");
 			}
-			else if( msg == CRCInput::RC_video || msg == CRCInput::RC_playpause) {
+			else if( msg == CRCInput::RC_video) {
 				//open moviebrowser via media player menu object
 				if (g_settings.recording_type != CNeutrinoApp::RECORDING_OFF)
 					CMediaPlayerMenu::getInstance()->exec(NULL, "moviebrowser");
 				CVFD::getInstance()->UpdateIcons();
 			}
-			else if( msg == CRCInput::RC_play ) {
+			else if( msg == CRCInput::RC_play || msg == CRCInput::RC_playpause ) {
 				switch (g_settings.key_playbutton)
 				{
 				default:

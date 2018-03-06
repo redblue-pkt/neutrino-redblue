@@ -49,15 +49,15 @@ class CCButtonSelect
 
 		/**Select a definied button inside button chain object
 		* @param[in]	item_id
-		* 	@li 	optional: expects type size_t
-		* @param[in]	fr_col
-		* 	@li 	optional: expects type fb_pixel_t, as default frame color
+		* 	@li 	expects type size_t
 		* @param[in]	sel_fr_col
 		* 	@li 	optional: expects type fb_pixel_t, as selected frame color
-		* @param[in]	bg_col
-		* 	@li 	optional: expects type fb_pixel_t, as default background color
+		* @param[in]	fr_col
+		* 	@li 	optional: expects type fb_pixel_t, as default frame color
 		* @param[in]	sel_bg_col
 		* 	@li 	optional: expects type fb_pixel_t, as selected background color
+		* @param[in]	bg_col
+		* 	@li 	optional: expects type fb_pixel_t, as default background color
 		* @param[in]	text_col
 		* 	@li 	optional: expects type fb_pixel_t, as default text color
 		* @param[in]	sel_text_col
@@ -68,10 +68,10 @@ class CCButtonSelect
 		* 	@li 	optional: expects type int, default = 1
 		*/
 		void setSelectedButton(size_t item_id,
-					const fb_pixel_t& fr_col 	= COL_MENUCONTENTSELECTED_PLUS_2,
 					const fb_pixel_t& sel_fr_col 	= COL_MENUCONTENTSELECTED_PLUS_0,
-					const fb_pixel_t& bg_col 	= COL_MENUCONTENT_PLUS_0,
+					const fb_pixel_t& fr_col 	= COL_FRAME_PLUS_0,
 					const fb_pixel_t& sel_bg_col 	= COL_MENUCONTENTSELECTED_PLUS_0,
+					const fb_pixel_t& bg_col 	= COL_MENUCONTENT_PLUS_0,
 					const fb_pixel_t& text_col 	= COL_MENUCONTENT_TEXT,
 					const fb_pixel_t& sel_text_col 	= COL_MENUCONTENTSELECTED_TEXT,
 					const int& frame_width 		= 1,

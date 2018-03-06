@@ -159,6 +159,7 @@ audiomenu.volume_adjustment Lautstärkeanpassung pro Kanal
 audiomenu.volume_adjustment_ac3 AC3-Tonspuren
 audiomenu.volume_adjustment_clear Gespeicherte Werte löschen
 audiomenu.volume_adjustment_pcm PCM-Tonspuren
+audiomenu.volume_last_used zuletzt verwendet
 audiomenu.volume_start Einschaltlautstärke
 audiomenu.volume_step Lautstärke Schrittweite
 audioplayer.add Hinzufügen
@@ -705,8 +706,8 @@ flashupdate.titlereadflash Flash auslesen
 flashupdate.titlewriteflash Flash schreiben
 flashupdate.type_addon Erweiterung
 flashupdate.type_beta Beta
-flashupdate.type_internal Intern
 flashupdate.type_locale Sprachdatei
+flashupdate.type_nightly Nightly
 flashupdate.type_release Release
 flashupdate.type_settings Einstellungen
 flashupdate.type_text Text
@@ -1155,7 +1156,7 @@ menu.hint_infobar_fonts Ändern Sie die Schriftgrößen in der Infobar
 menu.hint_infobar_logo Logo-, Kanalnummer- und Signal-Anzeige; Optionen in [Klammern] erscheinen in der kleinen Infobox
 menu.hint_infobar_logo_dir Verzeichnis für Senderlogos festlegen.
 menu.hint_infobar_on_epg Zeigt einen Hinweis bei EPG-Änderungen
-menu.hint_infobar_radiotext Zeigt Radiotext in einen Fenster, wenn verfügbar
+menu.hint_infobar_radiotext Wenn verfügbar, wird der Radiotext in einem separaten Fenster dargestellt
 menu.hint_infobar_res Zeige die gesendete Auflösung in Symbolen
 menu.hint_infobar_sat Zeigt die aktuellen Satelliten- oder Kabel-Provider
 menu.hint_infobar_setup Wählen Sie die Anzeigeoptionen für die Infobar aus
@@ -1259,6 +1260,7 @@ menu.hint_movie Wiedergabe von Filmen
 menu.hint_moviebrowser_fonts Ändern Sie die Schriftgrößen im Moviebrowser (Meine Aufnahmen)
 menu.hint_moviebrowser_setup Auswahl- und Anzeigeoptionen einstellen.
 menu.hint_movieplayer_bisection_jump Startwert für den bisektionalen Modus, um mit Seite hoch/runter vor- bzw. zurückzuspringen
+menu.hint_movieplayer_display_playtime Zeigt während der Wiedergabe die Spielzeit anstatt des Fimtitels im VFD
 menu.hint_movieplayer_plugin Wählen Sie ein Plugin, das mit einer Schnellstart-Taste im Movieplayer-Modus gestartet wird
 menu.hint_net_broadcast Ändern Sie die Broadcast-Adresse.\nWenn Sie unsicher sind, verwenden Sie zuletzt .255
 menu.hint_net_dhcp Verwenden Sie einen DHCP-Server für die automatische Vergabe einer IP-Adresse im Netzwerk
@@ -1901,6 +1903,7 @@ movieplayer.bookmarkname Bookmark Name
 movieplayer.bookmarkname_hint1 Geben Sie den Namen für das neue Lesezeichen ein
 movieplayer.bookmarkname_hint2 
 movieplayer.chapters Kapitel
+movieplayer.display_playtime Zeige Spielzeit im VFD
 movieplayer.fileplayback_audio Multiformat-Audiowiedergabe
 movieplayer.fileplayback_video Multiformat-Videowiedergabe
 movieplayer.head Movieplayer
@@ -2497,15 +2500,15 @@ timing.numericzap Umschalten mit Zifferntasten
 timing.popup_messages Popup Meldungen
 timing.static_messages Interaktive Meldungen
 timing.volumebar Lautstärkeanzeige
+tmdb.api_key TMDb API Schlüssel
+tmdb.enabled TMDb-Unterstützung
+tmdb.info TMDb-Info
+tmdb.read_data Suche TMDb-Daten ...
 tunersetup.cable Kabel (DVB-C)
 tunersetup.hybrid Hybrid (DVB-C/T/T2)
 tunersetup.mode Betriebsmodus
 tunersetup.power 5V-Versorgung bei DVB-T/T2 Kanälen
 tunersetup.terr Terrestrisch (DVB-T/T2)
-tmdb.api_key TMDb API Schlüssel
-tmdb.enabled TMDb-Unterstützung
-tmdb.info TMDb-Info
-tmdb.read_data Suche TMDb-Daten ...
 unicable.lnb Unicable Eingang
 unicable.qrg Unicable Frequenz
 unicable.scr Unicable SCR

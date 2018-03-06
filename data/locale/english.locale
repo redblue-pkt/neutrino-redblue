@@ -159,6 +159,7 @@ audiomenu.volume_adjustment Channel specific volume adjustment
 audiomenu.volume_adjustment_ac3 AC3 streams
 audiomenu.volume_adjustment_clear Clear saved values
 audiomenu.volume_adjustment_pcm PCM streams
+audiomenu.volume_last_used last used
 audiomenu.volume_start Start volume
 audiomenu.volume_step Volume step
 audioplayer.add Add
@@ -705,8 +706,8 @@ flashupdate.titlereadflash Reading Flash
 flashupdate.titlewriteflash Writing Flash
 flashupdate.type_addon Addon
 flashupdate.type_beta Beta
-flashupdate.type_internal Internal
 flashupdate.type_locale Locale
+flashupdate.type_nightly Nightly
 flashupdate.type_release Release
 flashupdate.type_settings Settings
 flashupdate.type_text Text
@@ -1155,7 +1156,7 @@ menu.hint_infobar_fonts Change infobar font sizes
 menu.hint_infobar_logo Logo, channelnumber and signal display; Options in [brackets] will be displayed in small infobox
 menu.hint_infobar_logo_dir Set folder for channel logos.
 menu.hint_infobar_on_epg Show infobar on current EPG event change
-menu.hint_infobar_radiotext Show radiotext window
+menu.hint_infobar_radiotext If available, radiotext will displayed in a separate window
 menu.hint_infobar_res Show channel resolution icons
 menu.hint_infobar_sat Show current satellite or cable provider
 menu.hint_infobar_setup Configure infobar options
@@ -1258,7 +1259,8 @@ menu.hint_misc_zapit Initial TV/Radio channels
 menu.hint_movie Play movies
 menu.hint_moviebrowser_fonts Change moviebrowser (My recordings) font sizes
 menu.hint_moviebrowser_setup Set selection and display options.
-menu.hint_movieplayer_bisection_jump Use bisectional mode to jump forward/backward with page up/down
+menu.hint_movieplayer_bisection_jump Start value for bisectional mode to jump forward/backward with page up/down
+menu.hint_movieplayer_display_playtime While playback show playtime instead of movietitle on VFD
 menu.hint_movieplayer_plugin Choose a plugin that's executed with the one touch key in movieplayer mode
 menu.hint_net_broadcast Enter broadcast address\nif unsure, use IP address with last .255
 menu.hint_net_dhcp Use DHCP server to auto-configure
@@ -1901,6 +1903,7 @@ movieplayer.bookmarkname Bookmarkname
 movieplayer.bookmarkname_hint1 Enter a name for your new bookmark
 movieplayer.bookmarkname_hint2 
 movieplayer.chapters Chapters
+movieplayer.display_playtime Show playtime in VFD
 movieplayer.fileplayback_audio Multiformat audio playback
 movieplayer.fileplayback_video Multiformat video playback
 movieplayer.head Movieplayer
@@ -2497,15 +2500,15 @@ timing.numericzap Numeric Zap
 timing.popup_messages Popup messages
 timing.static_messages Interactive messages
 timing.volumebar Volume bar
+tmdb.api_key TMDb API key
+tmdb.enabled TMDb support
+tmdb.info TMDb-Info
+tmdb.read_data Search TMDb data ...
 tunersetup.cable Cable (DVB-C)
 tunersetup.hybrid Hybrid (DVB-C/T/T2)
 tunersetup.mode Operation mode
 tunersetup.power 5V supply on DVB-T/T2 channels
 tunersetup.terr Terrestrial (DVB-T/T2)
-tmdb.api_key TMDb API key
-tmdb.enabled TMDb support
-tmdb.info TMDb-Info
-tmdb.read_data Search TMDb data ...
 unicable.lnb Unicable Input
 unicable.qrg Unicable Frequency
 unicable.scr Unicable SCR

@@ -1037,9 +1037,13 @@ int CScanSetup::showFrontendSetup(int number)
 			mc->setHint("", LOCALE_MENU_HINT_SCAN_SATENABLE);
 			satToSelect->addItem(mc);
 		}
+
 		fsatSelect = new CMenuDForwarder(LOCALE_SATSETUP_SELECT_SAT, allow_moptions, NULL, satToSelect, "", CRCInput::convertDigitToKey(shortcut++));
+		setOptionSatSelect(fenumber, fsatSelect);
 		fsatSelect->setHint("", LOCALE_MENU_HINT_SCAN_SATADD);
 		setupMenu->addItem(fsatSelect);
+		if (satToSelect->OnAfterHide.empty())
+			satToSelect->OnAfterHide.connect(sigc::bind(sigc::mem_fun(this, &CScanSetup::setOptionSatSelect), fenumber, fsatSelect));
 
 		fsatSetup 	= new CMenuForwarder(LOCALE_SATSETUP_SAT_SETUP, allow_moptions, NULL, this, "satsetup", CRCInput::convertDigitToKey(shortcut++));
 		fsatSetup->setHint("", LOCALE_MENU_HINT_SCAN_SATSETUP);
@@ -1721,7 +1725,7 @@ int CScanSetup::addScanOptionsItems(CMenuWidget *options_menu, const int &shortc
 		pol->setHint("", LOCALE_MENU_HINT_SCAN_POL);
 		pilot = new CMenuOptionChooser(LOCALE_EXTRA_TP_PILOT, (int *)&scansettings.sat_TP_pilot, SATSETUP_SCANTP_PILOT, SATSETUP_SCANTP_PILOT_COUNT, true, NULL, CRCInput::convertDigitToKey(shortCut++));
 		pilot->setHint("", LOCALE_MENU_HINT_SCAN_PILOT);
-		CStringInput		*pli 	= new CStringInput(LOCALE_EXTRA_TP_PLI, &scansettings.sat_TP_pli, 1, NONEXISTANT_LOCALE, NONEXISTANT_LOCALE, "0123456789");
+		CStringInput		*pli 	= new CStringInput(LOCALE_EXTRA_TP_PLI, &scansettings.sat_TP_pli, 3, NONEXISTANT_LOCALE, NONEXISTANT_LOCALE, "0123456789");
 		Pli 	= new CMenuDForwarder(LOCALE_EXTRA_TP_PLI, true, scansettings.sat_TP_pli, pli, "", CRCInput::convertDigitToKey(shortCut++));
 		CStringInput		*plc 	= new CStringInput(LOCALE_EXTRA_TP_PLC, &scansettings.sat_TP_plc, 6, NONEXISTANT_LOCALE, NONEXISTANT_LOCALE, "0123456789");
 		Plc 	= new CMenuDForwarder(LOCALE_EXTRA_TP_PLC, true, scansettings.sat_TP_plc, plc, "", CRCInput::convertDigitToKey(shortCut++));
@@ -2009,6 +2013,19 @@ void CScanSetup::updateManualSettings()
 	}
 }
 
+void CScanSetup::setOptionSatSelect(int fe_number, CMenuForwarder* menu_item)
+{
+	satellite_map_t & satmap = CFEManager::getInstance()->getFE(fe_number)->getSatellites();
+	int count = 0;
+	for (sat_iterator_t sit = satmap.begin(); sit != satmap.end(); ++sit) {
+		if(!sit->second.configured)
+			continue;
+		count++;
+	}
+	std::string count_of = to_string(count) + char(0x2f) + to_string(satmap.size());
+	menu_item->setOption(count_of);
+}
+
 int CTPSelectHandler::exec(CMenuTarget* parent, const std::string &actionkey)
 {
 	std::map<int, transponder> tmplist;
@@ -2052,7 +2069,7 @@ int CTPSelectHandler::exec(CMenuTarget* parent, const std::string &actionkey)
 	int i = menu.getItemsCount();
 	transponder_list_t &select_transponders = CServiceManager::getInstance()->GetSatelliteTransponders(position);
 	for (transponder_list_t::iterator tI = select_transponders.begin(); tI != select_transponders.end(); ++tI) {
-		sprintf(cnt, "%d", i);
+		snprintf(cnt, sizeof(cnt), "%d", i);
 		transponder & t = tI->second;
 
 		if(!old_selected && ct == t)

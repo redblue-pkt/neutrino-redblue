@@ -163,6 +163,18 @@ public:
 		}
 };
 
+#if 0
+void CFlashUpdate::update_php(std::string &url, const char* type)
+{
+	if (url.find("update.php") != std::string::npos)
+	{
+		url += "?revision=" + to_string(cs_get_revision());
+		url += "&chip_type=" + to_string(cs_get_chip_type());
+		url += "&image_type=" + (std::string)type;
+		printf("[update_php] url %s\n", url.c_str());
+	}
+}
+#endif
 bool CFlashUpdate::checkOnlineVersion()
 {
 	CHTTPTool httpTool;
@@ -242,9 +254,14 @@ bool CFlashUpdate::selectHttpImage(void)
 	showStatusMessageUTF(g_Locale->getText(LOCALE_FLASHUPDATE_GETINFOFILE));
 
 	char current[200];
+#if 0
 	snprintf(current, 200, "%s: %s %s %s %s %s", g_Locale->getText(LOCALE_FLASHUPDATE_CURRENTVERSION_SEP), curInfo.getReleaseCycle(), 
 		g_Locale->getText(LOCALE_FLASHUPDATE_CURRENTVERSIONDATE), curInfo.getDate(), 
 		g_Locale->getText(LOCALE_FLASHUPDATE_CURRENTVERSIONTIME), curInfo.getTime());
+#endif
+
+	snprintf(current, 200, "%s %s %s %s", curInfo.getReleaseCycle(), curInfo.getType(true), curInfo.getDate(), curInfo.getTime());
+
 
 	CMenuWidget SelectionWidget(LOCALE_FLASHUPDATE_SELECTIMAGE, NEUTRINO_ICON_UPDATE, listWidth, MN_WIDGET_ID_IMAGESELECTOR);
 
@@ -252,7 +269,7 @@ bool CFlashUpdate::selectHttpImage(void)
 	SelectionWidget.addItem(GenericMenuBack);
 	SelectionWidget.addItem(new CMenuSeparator(CMenuSeparator::LINE));
 
-	SelectionWidget.addItem(new CMenuForwarder(current, false));
+	SelectionWidget.addItem(new CMenuForwarder(current, false, g_Locale->getText(LOCALE_FLASHUPDATE_CURRENTVERSION_SEP)));
 	std::ifstream urlFile(g_settings.softupdate_url_file.c_str());
 	dprintf(DEBUG_NORMAL, "[update] file %s\n", g_settings.softupdate_url_file.c_str());
 
@@ -270,12 +287,16 @@ bool CFlashUpdate::selectHttpImage(void)
 		}
 		else
 		{
+// 			update_php(url, curInfo.getType());
 			startpos = url.find('/', startpos+2)+1;
 		}
 		endpos = std::string::npos;
 		updates_lists.push_back(url.substr(startpos, endpos - startpos));
 
-		SelectionWidget.addItem(new CMenuSeparator(CMenuSeparator::STRING | CMenuSeparator::LINE, updates_lists.rbegin()->c_str()));
+		// don't paint separator for lists with no entry
+		// SelectionWidget.addItem(new CMenuSeparator(CMenuSeparator::STRING | CMenuSeparator::LINE, updates_lists.rbegin()->c_str()));
+		bool separator = false;
+
 		if (httpTool.downloadFile(url, gTmpPath LIST_OF_UPDATES_LOCAL_FILENAME, 20))
 		{
 			std::ifstream in(gTmpPath LIST_OF_UPDATES_LOCAL_FILENAME);
@@ -301,7 +322,7 @@ bool CFlashUpdate::selectHttpImage(void)
 				fileTypes[i] = versionInfo.snapshot;
 				std::string description = versionInfo.getReleaseCycle();
 				description += ' ';
-				description += versionInfo.getType();
+				description += versionInfo.getType(true);
 				description += ' ';
 				description += versionInfo.getDate();
 				description += ' ';
@@ -309,6 +330,14 @@ bool CFlashUpdate::selectHttpImage(void)
 
 				descriptions.push_back(description); /* workaround since CMenuForwarder does not store the Option String itself */
 
+
+				if (!separator)
+				{
+					std::string updates_list = updates_lists.rbegin()->c_str();
+					updates_list = updates_list.substr(0, updates_list.find("?", 0)); // truncate updates list
+					SelectionWidget.addItem(new CMenuSeparator(CMenuSeparator::STRING | CMenuSeparator::LINE, updates_list));
+					separator = true;
+				}
 				CUpdateMenuTarget * up = new CUpdateMenuTarget(i, &selected);
 				mf = new CMenuDForwarder(descriptions[i].c_str(), enabled, names[i].c_str(), up);
 				//TODO mf->setHint(NEUTRINO_ICON_HINT_SW_UPDATE, "");
@@ -407,14 +436,12 @@ bool CFlashUpdate::checkVersion4Update()
 
 		dprintf(DEBUG_NORMAL, "[update] internet version: %s\n", newVersion.c_str());
 
-		showLocalStatus(100);
-		showGlobalStatus(20);
 		hide();
 
 		msg_body = LOCALE_FLASHUPDATE_MSGBOX;
 #ifdef SQUASHFS
 		versionInfo = new CFlashVersionInfo(newVersion);//Memory leak: versionInfo
-		sprintf(msg, g_Locale->getText(msg_body), versionInfo->getDate(), versionInfo->getTime(), versionInfo->getReleaseCycle(), versionInfo->getType());
+		sprintf(msg, g_Locale->getText(msg_body), versionInfo->getDate(), versionInfo->getTime(), versionInfo->getReleaseCycle(), versionInfo->getType(true));
 
 		if (fileType <= '2')
 		{
@@ -422,12 +449,10 @@ bool CFlashUpdate::checkVersion4Update()
 			    (ShowMsg(LOCALE_MESSAGEBOX_INFO, LOCALE_FLASHUPDATE_WRONGBASE, CMsgBox::mbrYes, CMsgBox::mbYes | CMsgBox::mbNo, NEUTRINO_ICON_UPDATE) != CMsgBox::mbrYes))
 			{
 				delete versionInfo;
-				//ShowHint(LOCALE_MESSAGEBOX_ERROR, LOCALE_FLASHUPDATE_WRONGBASE);
 				return false;
 			}
 
-			if ((strcmp("Release", versionInfo->getType()) != 0) &&
-			    //(ShowMsg(LOCALE_MESSAGEBOX_INFO, LOCALE_FLASHUPDATE_EXPERIMENTALIMAGE, CMsgBox::mbrYes, CMsgBox::mbYes | CMsgBox::mbNo, NEUTRINO_ICON_UPDATE) != CMsgBox::mbrYes))
+			if ((fileType != '0' /*Release*/) &&
 			    (ShowMsg(LOCALE_MESSAGEBOX_INFO, LOCALE_FLASHUPDATE_EXPERIMENTALIMAGE, CMsgBox::mbrYes, CMsgBox::mbYes | CMsgBox::mbNo, NEUTRINO_ICON_UPDATE) != CMsgBox::mbrYes))
 			{
 				delete versionInfo;

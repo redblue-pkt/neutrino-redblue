@@ -749,8 +749,8 @@ void YaFT_p::draw_line(int line)
 
 	if (fb.dy_min > line * CELL_HEIGHT)
 		fb.dy_min = line * CELL_HEIGHT;
-	if (fb.dy_max < (line+1) * CELL_HEIGHT - 1)
-		fb.dy_max = (line+1) * CELL_HEIGHT - 1;
+	if (fb.dy_max < (line+1) * CELL_HEIGHT)
+		fb.dy_max = (line+1) * CELL_HEIGHT;
 
 	for (col = 0; col < cols; col++) {
 		/* target cell */
@@ -825,10 +825,11 @@ void YaFT_p::refresh()
 #if 1
 	if (fb.dy_max != -1) {
 		int blit_height = fb.dy_max - fb.dy_min;
-		fb.cfb->blit2FB(fb.buf, fb.width, blit_height, fb.xstart, fb.ystart+fb.dy_min, 0, fb.dy_min);
+		uint32_t *buf = fb.buf + fb.width * fb.dy_min;
+		fb.cfb->blit2FB(buf, fb.width, blit_height, fb.xstart, fb.ystart + fb.dy_min);
 	}
 #else
-	fb.cfb->blit2FB(fb.buf, fb.width, fb.height, fb.xstart, fb.ystart, 0, 0);
+	fb.cfb->blit2FB(fb.buf, fb.width, fb.height, fb.xstart, fb.ystart);
 #endif
 	fb.dy_min = fb.height;
 	fb.dy_max = -1;

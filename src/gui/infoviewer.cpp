@@ -1754,9 +1754,9 @@ void CInfoViewer::display_Info(const char *current, const char *next,
 	int currTimeW = 0;
 	int nextTimeW = 0;
 	if (runningRest)
-		currTimeW = g_Font[SNeutrinoSettings::FONT_TYPE_INFOBAR_INFO]->getRenderWidth(runningRest) + OFFSET_INNER_MID;
+		currTimeW = g_Font[SNeutrinoSettings::FONT_TYPE_INFOBAR_INFO]->getRenderWidth("000 / 000 min") + OFFSET_INNER_MID;
 	if (nextDuration)
-		nextTimeW = g_Font[SNeutrinoSettings::FONT_TYPE_INFOBAR_INFO]->getRenderWidth(nextDuration) + OFFSET_INNER_MID;
+		nextTimeW = g_Font[SNeutrinoSettings::FONT_TYPE_INFOBAR_INFO]->getRenderWidth("000 min") + OFFSET_INNER_MID;
 	int currTimeX = BoxEndX - currTimeW - OFFSET_INNER_MID;
 	int nextTimeX = BoxEndX - nextTimeW - OFFSET_INNER_MID;
 
@@ -1789,19 +1789,20 @@ void CInfoViewer::display_Info(const char *current, const char *next,
 			txt_curr_start->setText(runningStart, CTextBox::NO_AUTO_LINEBREAK, g_Font[SNeutrinoSettings::FONT_TYPE_INFOBAR_INFO], colored_event_C ? COL_COLORED_EVENTS_TEXT : COL_INFOBAR_TEXT);
 			txt_curr_start->paint(CC_SAVE_SCREEN_YES);
 		}
-
-		if (runningRest){
-			if (txt_curr_rest == NULL)
-				txt_curr_rest = new CComponentsTextTransp(NULL, currTimeX, CurrInfoY - height, currTimeW, height);
-			else {
-				if (txt_curr_rest->isPainted())
-					txt_curr_rest->kill();
-				txt_curr_rest->setDimensionsAll(currTimeX, CurrInfoY - height, currTimeW, height);
-			}
-			txt_curr_rest->setItemName("txt_curr_rest");
-			txt_curr_rest->setText(runningRest, CTextBox::RIGHT, g_Font[SNeutrinoSettings::FONT_TYPE_INFOBAR_INFO], colored_event_C ? COL_COLORED_EVENTS_TEXT : COL_INFOBAR_TEXT);
-			txt_curr_rest->paint(CC_SAVE_SCREEN_YES);
+	}
+	// we have always runningRest, except it is NULL
+	if (runningRest)
+	{
+		if (txt_curr_rest == NULL)
+			txt_curr_rest = new CComponentsTextTransp(NULL, currTimeX, CurrInfoY - height, currTimeW, height);
+		else {
+			if (txt_curr_rest->isPainted())
+				txt_curr_rest->kill();
+			txt_curr_rest->setDimensionsAll(currTimeX, CurrInfoY - height, currTimeW, height);
 		}
+		txt_curr_rest->setItemName("txt_curr_rest");
+		txt_curr_rest->setText(runningRest, CTextBox::RIGHT, g_Font[SNeutrinoSettings::FONT_TYPE_INFOBAR_INFO], colored_event_C ? COL_COLORED_EVENTS_TEXT : COL_INFOBAR_TEXT);
+		txt_curr_rest->paint(CC_SAVE_SCREEN_YES);
 	}
 
 	//next event
